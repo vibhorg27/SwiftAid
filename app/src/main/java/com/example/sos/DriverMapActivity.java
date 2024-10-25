@@ -136,7 +136,7 @@ public class DriverMapActivity extends FragmentActivity implements OnMapReadyCal
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists() && !customerID.equals("")){
                     List<Object> map = (List<Object>) snapshot.getValue();
-                    double locationLat =0;
+                    double locationLat = 0;
                     double locationLng = 0;
                     if(map.get(0) != null){
                         locationLat = Double.parseDouble(map.get(0).toString());
@@ -146,7 +146,8 @@ public class DriverMapActivity extends FragmentActivity implements OnMapReadyCal
                     }
                     LatLng driverLatLng = new LatLng(locationLat, locationLng);
 
-                    pickupMarker= mMap.addMarker(new MarkerOptions().position(driverLatLng).title("Pickup Emergency"));
+                    pickupMarker = mMap.addMarker(new MarkerOptions().position(driverLatLng).title("Pickup Emergency"));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLng(driverLatLng));
                 }
             }
 

@@ -5,9 +5,13 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -22,82 +26,156 @@ public class CustomerLoginActivity extends AppCompatActivity {
 
     private EditText mEmail, mPassword;
     private Button mLogin, mRegistration;
+    private ProgressBar mProgressBar;
 
     private FirebaseAuth mAuth;
-    private FirebaseAuth.AuthStateListener firebaseAuthStateListner;
-
+    private FirebaseAuth.AuthStateListener firebaseAuthStateListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_customer_login);
 
+        // Initialize Firebase Auth instance
         mAuth = FirebaseAuth.getInstance();
-        firebaseAuthStateListner = new FirebaseAuth.AuthStateListener() {
-            @Override
-            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                if(user!=null){
-                    Intent intent = new Intent(CustomerLoginActivity.this, CustomerMapActivity.class);
-                    startActivity(intent);
-                    finish();
-                    return;
-                }
+
+        // Auth state listener to redirect user if already logged in
+        firebaseAuthStateListener = firebaseAuth -> {
+            FirebaseUser user = mAuth.getCurrentUser();
+            if (user != null) {
+                Intent intent = new Intent(CustomerLoginActivity.this, CustomerMapActivity.class);
+                startActivity(intent);
+                finish();
             }
         };
 
-        mEmail = (EditText) findViewById(R.id.email);
-        mPassword = (EditText) findViewById(R.id.password);
+        // Initialize views
+        mEmail = findViewById(R.id.email);
+        mPassword = findViewById(R.id.password);
+        mLogin = findViewById(R.id.login);
+        mRegistration = findViewById(R.id.registration);
+        mProgressBar = findViewById(R.id.progressBar);  // New ProgressBar
 
-        mLogin = (Button) findViewById(R.id.login);
-        mRegistration = (Button) findViewById(R.id.registration);
+        // Set onClick listeners for buttons
+        mRegistration.setOnClickListener(v -> registerUser());
+        mLogin.setOnClickListener(v -> loginUser());
 
-        mRegistration.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final String email= mEmail.getText().toString();
-                final String password = mPassword.getText().toString();
-                mAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(CustomerLoginActivity.this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if(!task.isSuccessful()){
-                            Toast.makeText(CustomerLoginActivity.this, "sign up error", Toast.LENGTH_SHORT).show();
-                        }else {
-                            String user_id= mAuth.getCurrentUser().getUid();
-                            DatabaseReference current_user_db = FirebaseDatabase.getInstance().getReference().child("Users").child("Customers").child(user_id);
-                            current_user_db.setValue(true);
+        // Disable buttons if fields are empty
+        setupTextListeners();
+    }
+
+    // Register new user
+    private void registerUser() {
+        String email = mEmail.getText().toString().trim();
+        String password = mPassword.getText().toString().trim();
+
+        if (validateInputs(email, password)) {
+            showProgress(true);  // Show loading indicator
+            mAuth.createUserWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(this, task -> {
+                        showProgress(false);  // Hide loading indicator
+                        if (task.isSuccessful()) {
+                            String userId = mAuth.getCurrentUser().getUid();
+                            DatabaseReference currentUserDb = FirebaseDatabase.getInstance()
+                                    .getReference("Users")
+                                    .child("Customers")
+                                    .child(userId);
+                            currentUserDb.setValue(true);
+                            Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(this, "Registration failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                         }
-                    }
-                });
-            }
-        });
-        mLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final String email= mEmail.getText().toString();
-                final String password = mPassword.getText().toString();
-                mAuth.signInWithEmailAndPassword(email,password).addOnCompleteListener(CustomerLoginActivity.this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if(!task.isSuccessful()){
-                            Toast.makeText(CustomerLoginActivity.this, "sign in error", Toast.LENGTH_SHORT).show();
-                        }
+                    });
+        }
+    }
 
-                    }
-                });
+    // Login existing user
+    private void loginUser() {
+        String email = mEmail.getText().toString().trim();
+        String password = mPassword.getText().toString().trim();
+
+        if (validateInputs(email, password)) {
+            showProgress(true);  // Show loading indicator
+            mAuth.signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(this, task -> {
+                        showProgress(false);  // Hide loading indicator
+                        if (task.isSuccessful()) {
+                            Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(this, "Login failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        }
+    }
+
+    // Validate input fields
+    private boolean validateInputs(String email, String password) {
+        if (TextUtils.isEmpty(email)) {
+            mEmail.setError("Email is required");
+            return false;
+        }
+        if (TextUtils.isEmpty(password)) {
+            mPassword.setError("Password is required");
+            return false;
+        }
+        return true;
+    }
+
+    // Show or hide progress bar
+    private void showProgress(boolean show) {
+        mProgressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+        mLogin.setEnabled(!show);
+        mRegistration.setEnabled(!show);
+    }
+
+    // Disable buttons until both fields are filled
+    private void setupTextListeners() {
+        mEmail.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateButtonState();
             }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
         });
+
+        mPassword.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateButtonState();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    // Enable or disable buttons based on input
+    private void updateButtonState() {
+        boolean enable = !TextUtils.isEmpty(mEmail.getText().toString().trim()) &&
+                !TextUtils.isEmpty(mPassword.getText().toString().trim());
+        mLogin.setEnabled(enable);
+        mRegistration.setEnabled(enable);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        mAuth.addAuthStateListener(firebaseAuthStateListner);
+        mAuth.addAuthStateListener(firebaseAuthStateListener);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        mAuth.removeAuthStateListener(firebaseAuthStateListner);
+        if (firebaseAuthStateListener != null) {
+            mAuth.removeAuthStateListener(firebaseAuthStateListener);
+        }
     }
 }

@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "109368979727",
+    "firebase_url": "https://med-cab-fff36-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "med-cab-fff36",
+    "storage_bucket": "med-cab-fff36.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:109368979727:android:4ce4c75f55d82b94cf4e7a",
+        "android_client_info": {
+          "package_name": "com.example.sos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACE3rcL5DThZ676gaXxY_esHGMkmnAWyU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

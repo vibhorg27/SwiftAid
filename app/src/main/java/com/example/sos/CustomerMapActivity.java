@@ -232,7 +232,7 @@ public class CustomerMapActivity extends FragmentActivity implements OnMapReadyC
 
                     float distance =  loc1.distanceTo(loc2);
 
-                    if(distance < 10){
+                    if(distance < 1){
                         mSos.setText("Ambulance is here");
 
                     }else {
